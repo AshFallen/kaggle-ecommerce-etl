@@ -116,6 +116,16 @@ pip install -r requirements.txt
 
 ## 🐛 Known Issues
 
+* **Multiple Lambda Invocations from Single Upload Batch** — Currently, the S3 Event Notification is configured to trigger `Lambda B` whenever a new file appears in `kaggle/raw/`. When uploading multiple CSV files at once (e.g., `Amazon Sale`, `Sale`, and `International Sale`), S3 sends a separate event for each file. This results in multiple near-simultaneous Lambda invocations, which can cause:
+  - Duplicate logs in CloudWatch.
+  - Multiple copies of the same cleaned file in the backup folder.
+  - Redundant database inserts if deduplication is not handled carefully.
+
+  **Planned Solution:** Replace the direct S3 Event Notification trigger with an **Amazon EventBridge scheduled rule**. Instead of triggering immediately for each file, the pipeline will run on a set schedule (e.g., every 1 week), scan for new files in `kaggle/raw/`, and process them in a single batch. This will:
+  - Eliminate duplicate processing from multi-file uploads.
+  - Simplify logging and error tracking.
+  - Allow for more controlled ingestion workflows.
+
 * No scheduler yet for Lambda A (can be triggered manually).
 * Schema assumes data columns are stable across uploads.
 * International Sale format varies across files — pipeline currently assumes best-effort structure.
